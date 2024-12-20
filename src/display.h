@@ -28,6 +28,7 @@ extern BB_SPI_LCD oled;
 // Display dimensions
 #define DISPLAY_WIDTH 128
 #define DISPLAY_HEIGHT 128
+#define DISPLAY_BRIGHTNESS 0
 
 void initializeOLED();
 void displayBootMessage(const char *message);

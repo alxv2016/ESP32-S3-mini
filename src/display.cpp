@@ -3,6 +3,13 @@
 BB_SPI_LCD oled;
 
 void initializeOLED() {
+  // Initialize OLED display with error checking
+  if (!oled.begin(LCD_SSD1351, FLAGS_NONE, SPI_FREQUENCY, CS_PIN, DC_PIN, RST_PIN,
+                  -1, -1, MOSI_PIN, CLK_PIN)) {
+    Serial.println("Error: OLED initialization failed.");
+    return;
+  }
+
   oled.begin(LCD_SSD1351, FLAGS_NONE, SPI_FREQUENCY, CS_PIN, DC_PIN, RST_PIN,
              -1, -1, MOSI_PIN, CLK_PIN);
   oled.setRotation(LCD_ORIENTATION_90);

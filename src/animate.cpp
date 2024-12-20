@@ -4,7 +4,6 @@
 // Global variables and constants
 AnimatedGIF gif;
 GIFContext gifContext = {&oled, nullptr, 0, 0}; // Context for GIF drawing
-uint8_t *sharedFrameBuffer = nullptr;          // Shared frame buffer for all GIFs
 // Assume maximum canvas size for all GIFs
 const size_t maxCanvasWidth = GIF_WIDTH; // Max width of GIFs
 const size_t maxCanvasHeight = GIF_HEIGHT; // Max height of GIFs
@@ -35,9 +34,9 @@ void printMemoryStats() {
 void initializeGIF() { 
   gif.begin(GIF_PALETTE_RGB565_BE); 
     // Allocate shared frame buffer in PSRAM (only once during initialization)
-  if (sharedFrameBuffer == nullptr) {
-    sharedFrameBuffer = (uint8_t *)heap_caps_malloc(frameBufferSize, MALLOC_CAP_8BIT);
-    if (!sharedFrameBuffer) {
+  if (gifContext.sharedFrameBuffer == nullptr) {
+    gifContext.sharedFrameBuffer = (uint8_t *)heap_caps_malloc(frameBufferSize, MALLOC_CAP_8BIT);
+    if (!gifContext.sharedFrameBuffer) {
         Serial.println("Error: Failed to allocate shared frame buffer in PSRAM.");
     }
   }
@@ -45,9 +44,9 @@ void initializeGIF() {
 }
 
 void cleanupGIFContext() {
-  if (sharedFrameBuffer) {
-    heap_caps_free(sharedFrameBuffer);
-    sharedFrameBuffer = nullptr;
+  if (gifContext.sharedFrameBuffer) {
+    heap_caps_free(gifContext.sharedFrameBuffer);
+    gifContext.sharedFrameBuffer = nullptr;
   }
   gif.close();
 }
@@ -76,25 +75,18 @@ void playGIF(uint8_t *gifData, size_t gifSize, bool loop = false) {
   size_t currentFrameBufferSize = gif.getCanvasWidth() * (gif.getCanvasHeight() + 2); // Adjust as needed
 
   // Only reallocate the frame buffer if the size has changed
-  if (sharedFrameBuffer == nullptr || currentFrameBufferSize != frameBufferSize) {
-    sharedFrameBuffer = (uint8_t *)heap_caps_malloc(currentFrameBufferSize, MALLOC_CAP_8BIT);
-    if (!sharedFrameBuffer) {
+  if (gifContext.sharedFrameBuffer == nullptr || currentFrameBufferSize != frameBufferSize) {
+    gifContext.sharedFrameBuffer = (uint8_t *)heap_caps_malloc(currentFrameBufferSize, MALLOC_CAP_8BIT);
+    if (!gifContext.sharedFrameBuffer) {
       Serial.printf("Memory Error: Failed to allocate %zu bytes\n", currentFrameBufferSize);
       cleanupGIFContext();
       return; // Exit the function if memory allocation fails
     }
   }
-  // sharedFrameBuffer = (uint8_t *)heap_caps_malloc(frameBufferSize, MALLOC_CAP_8BIT);
-
-  // if (!sharedFrameBuffer) {
-  //   Serial.printf("Memory Error: Failed to allocate %zu bytes\n", sharedFrameBuffer);
-  //   gif.close(); // Close the GIF file before returning
-  //   return; // Exit the function if memory allocation fails
-  // }
 
   // Set the drawing type to "cooked" to allow the GIF library to pre-process frames
   gif.setDrawType(GIF_DRAW_COOKED);
-  gif.setFrameBuf(sharedFrameBuffer);
+  gif.setFrameBuf(gifContext.sharedFrameBuffer);
 
   const int targetFPS = GIF_FPS; // Set the target FPS
   const int frameDelay = 1000000 / targetFPS; // Microseconds per frame (1 second = 1000000 microseconds)
