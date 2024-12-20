@@ -1,0 +1,51 @@
+#ifndef ANIMATE_H
+#define ANIMATE_H
+
+#include <AnimatedGIF.h>
+#include "display.h"
+#include "emojis.h"
+
+// Global objects
+extern AnimatedGIF gif;
+
+struct GIFContext {
+  BB_SPI_LCD *oled;
+  uint8_t *frameBuffer;
+  int offsetX;
+  int offsetY;
+};
+
+struct GIFData {
+  uint8_t* data; // Pointer to the GIF data
+  size_t size;   // Size of the GIF data
+};
+
+// GIF SETTINGS
+#define GIF_FPS 15
+#define TOTAL_GIFS 7
+#define REST_EMOTE rest
+// Array of GIFs
+#define LOOK_LEFT_RIGHT_EMOTE look_left_right
+#define LOOK_UP_DOWN_EMOTE look_up_down
+#define UWU_EMOTE uwu
+#define SLEEPY_EMOTE sleepy
+#define SIGH_EMOTE sigh
+#define SHOCK_EMOTE shock
+#define PERVE_EMOTE perve
+// #define MISCHIEF_EMOTE mischief
+// #define LAUGH_EMOTE laugh
+// #define KISSY_EMOTE kissy
+// #define JUDGE_EMOTE judge
+// #define DIZZY_EMOTE dizzy
+// #define CRY_EMOTE cry
+// #define ANGRY_EMOTE angry
+
+// Function declarations
+void cleanupGIFContext(void);
+void GIFDraw(GIFDRAW *pDraw);
+void playGIF(uint8_t* gifData, size_t gifSize, bool loop);
+void playRandomGIF(void);
+void initializeGIF(void) ;
+void printMemoryStats(void);
+
+#endif

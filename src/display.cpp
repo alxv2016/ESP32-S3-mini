@@ -1,4 +1,4 @@
-#include "display.h";
+#include "display.h"
 
 BB_SPI_LCD oled;
 

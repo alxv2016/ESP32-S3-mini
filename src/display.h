@@ -23,15 +23,13 @@ extern BB_SPI_LCD oled;
 #define DC_PIN 4
 #define RST_PIN 5
 
-// SPI settings
+// SPI fequency
 #define SPI_FREQUENCY 20000000
-
 // Display dimensions
 #define DISPLAY_WIDTH 128
 #define DISPLAY_HEIGHT 128
 
 void initializeOLED();
 void displayBootMessage(const char *message);
-
 
 #endif
