@@ -5,9 +5,12 @@
 AnimatedGIF gif;
 GIFContext gifContext = {&oled, nullptr, 0, 0}; // Context for GIF drawing
 uint8_t *sharedFrameBuffer = nullptr;          // Shared frame buffer for all GIFs
-const size_t frameBufferSize = 128 * 128 * 2;  // Frame buffer size (128x128 GIFs, 2 bytes per pixel)
+// Assume maximum canvas size for all GIFs
+const size_t maxCanvasWidth = GIF_WIDTH; // Max width of GIFs
+const size_t maxCanvasHeight = GIF_HEIGHT; // Max height of GIFs
+const size_t frameBufferSize = maxCanvasWidth * maxCanvasHeight * 2;  // 2 bytes per pixel (RGB565)
 
-GIFData gifFiles[TOTAL_GIFS] = {
+GIFData gifFiles[] = {
     { (uint8_t*)LOOK_LEFT_RIGHT_EMOTE, sizeof(LOOK_LEFT_RIGHT_EMOTE) },
     { (uint8_t*)LOOK_UP_DOWN_EMOTE, sizeof(LOOK_UP_DOWN_EMOTE) },
     { (uint8_t*)UWU_EMOTE, sizeof(UWU_EMOTE) },
@@ -15,13 +18,13 @@ GIFData gifFiles[TOTAL_GIFS] = {
     { (uint8_t*)SIGH_EMOTE, sizeof(SIGH_EMOTE) },
     { (uint8_t*)SHOCK_EMOTE, sizeof(SHOCK_EMOTE) },
     { (uint8_t*)PERVE_EMOTE, sizeof(PERVE_EMOTE) },
-    // { (uint8_t*)MISCHIEF_EMOTE, sizeof(MISCHIEF_EMOTE) },
-    // { (uint8_t*)LAUGH_EMOTE, sizeof(LAUGH_EMOTE) },
-    // { (uint8_t*)KISSY_EMOTE, sizeof(KISSY_EMOTE) },
-    // { (uint8_t*)JUDGE_EMOTE, sizeof(JUDGE_EMOTE) },
-    // { (uint8_t*)DIZZY_EMOTE, sizeof(DIZZY_EMOTE) },
-    // { (uint8_t*)CRY_EMOTE, sizeof(CRY_EMOTE) },
-    // { (uint8_t*)ANGRY_EMOTE, sizeof(ANGRY_EMOTE) },
+    { (uint8_t*)MISCHIEF_EMOTE, sizeof(MISCHIEF_EMOTE) },
+    { (uint8_t*)LAUGH_EMOTE, sizeof(LAUGH_EMOTE) },
+    { (uint8_t*)KISSY_EMOTE, sizeof(KISSY_EMOTE) },
+    { (uint8_t*)JUDGE_EMOTE, sizeof(JUDGE_EMOTE) },
+    { (uint8_t*)DIZZY_EMOTE, sizeof(DIZZY_EMOTE) },
+    { (uint8_t*)CRY_EMOTE, sizeof(CRY_EMOTE) },
+    { (uint8_t*)ANGRY_EMOTE, sizeof(ANGRY_EMOTE) },
     // Add other GIFs here (up to 15)
 };
 void printMemoryStats() {
@@ -31,10 +34,12 @@ void printMemoryStats() {
 
 void initializeGIF() { 
   gif.begin(GIF_PALETTE_RGB565_BE); 
-    // Allocate shared frame buffer in PSRAM
-  sharedFrameBuffer = (uint8_t *)heap_caps_malloc(frameBufferSize, MALLOC_CAP_SPIRAM);
-  if (!sharedFrameBuffer) {
-      Serial.println("Error: Failed to allocate shared frame buffer in PSRAM.");
+    // Allocate shared frame buffer in PSRAM (only once during initialization)
+  if (sharedFrameBuffer == nullptr) {
+    sharedFrameBuffer = (uint8_t *)heap_caps_malloc(frameBufferSize, MALLOC_CAP_8BIT);
+    if (!sharedFrameBuffer) {
+        Serial.println("Error: Failed to allocate shared frame buffer in PSRAM.");
+    }
   }
   printMemoryStats();
 }
@@ -60,6 +65,7 @@ void playGIF(uint8_t *gifData, size_t gifSize, bool loop = false) {
   // return early and print an error message.
   if (!gif.open(gifData, gifSize, GIFDraw)) {
     Serial.println("Error: Failed to open GIF file."); // Print an error message
+    cleanupGIFContext(); // Ensure cleanup happens on failure
     return; // Exit the function early if the GIF fails to open
   }
 
@@ -67,16 +73,24 @@ void playGIF(uint8_t *gifData, size_t gifSize, bool loop = false) {
   gifContext.offsetX = (oled.width() - gif.getCanvasWidth()) / 2;  // Center horizontally
   gifContext.offsetY = (oled.height() - gif.getCanvasHeight()) / 2; // Center vertically
   // Calculate the size of the framebuffer required to store one frame of the GIF
-  size_t frameBufferSize = gif.getCanvasWidth() * (gif.getCanvasHeight() + 2); // Adjust as needed
+  size_t currentFrameBufferSize = gif.getCanvasWidth() * (gif.getCanvasHeight() + 2); // Adjust as needed
 
-  // Allocate memory for the frame buffer
-  sharedFrameBuffer = (uint8_t *)heap_caps_malloc(frameBufferSize, MALLOC_CAP_8BIT);
-
-  if (!sharedFrameBuffer) {
-    Serial.printf("Memory Error: Failed to allocate %zu bytes\n", sharedFrameBuffer);
-    gif.close(); // Close the GIF file before returning
-    return; // Exit the function if memory allocation fails
+  // Only reallocate the frame buffer if the size has changed
+  if (sharedFrameBuffer == nullptr || currentFrameBufferSize != frameBufferSize) {
+    sharedFrameBuffer = (uint8_t *)heap_caps_malloc(currentFrameBufferSize, MALLOC_CAP_8BIT);
+    if (!sharedFrameBuffer) {
+      Serial.printf("Memory Error: Failed to allocate %zu bytes\n", currentFrameBufferSize);
+      cleanupGIFContext();
+      return; // Exit the function if memory allocation fails
+    }
   }
+  // sharedFrameBuffer = (uint8_t *)heap_caps_malloc(frameBufferSize, MALLOC_CAP_8BIT);
+
+  // if (!sharedFrameBuffer) {
+  //   Serial.printf("Memory Error: Failed to allocate %zu bytes\n", sharedFrameBuffer);
+  //   gif.close(); // Close the GIF file before returning
+  //   return; // Exit the function if memory allocation fails
+  // }
 
   // Set the drawing type to "cooked" to allow the GIF library to pre-process frames
   gif.setDrawType(GIF_DRAW_COOKED);
@@ -115,7 +129,6 @@ void playGIF(uint8_t *gifData, size_t gifSize, bool loop = false) {
 void playRandomGIF() {
   while (true) { // Infinite loop to continuously play random GIFs
     // Randomly select a GIF file
-    printMemoryStats();
     int randomIndex = random(0, TOTAL_GIFS); // Get a random index (0 to NUM_GIFS-1)
 
     uint8_t* gifData = gifFiles[randomIndex].data;

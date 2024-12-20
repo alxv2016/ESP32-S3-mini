@@ -19,10 +19,15 @@ struct GIFData {
   uint8_t* data; // Pointer to the GIF data
   size_t size;   // Size of the GIF data
 };
+// Declare the array (no definition here, just a declaration)
+extern GIFData gifFiles[];
 
 // GIF SETTINGS
 #define GIF_FPS 15
-#define TOTAL_GIFS 7
+#define GIF_HEIGHT 128
+#define GIF_WIDTH 128
+// Define the macro to count the number of GIFs in the array
+#define TOTAL_GIFS (sizeof(gifFiles) / sizeof(gifFiles[0]))
 #define REST_EMOTE rest
 // Array of GIFs
 #define LOOK_LEFT_RIGHT_EMOTE look_left_right
@@ -32,13 +37,13 @@ struct GIFData {
 #define SIGH_EMOTE sigh
 #define SHOCK_EMOTE shock
 #define PERVE_EMOTE perve
-// #define MISCHIEF_EMOTE mischief
-// #define LAUGH_EMOTE laugh
-// #define KISSY_EMOTE kissy
-// #define JUDGE_EMOTE judge
-// #define DIZZY_EMOTE dizzy
-// #define CRY_EMOTE cry
-// #define ANGRY_EMOTE angry
+#define MISCHIEF_EMOTE mischief
+#define LAUGH_EMOTE laugh
+#define KISSY_EMOTE kissy
+#define JUDGE_EMOTE judge
+#define DIZZY_EMOTE dizzy
+#define CRY_EMOTE cry
+#define ANGRY_EMOTE angry
 
 // Function declarations
 void cleanupGIFContext(void);
