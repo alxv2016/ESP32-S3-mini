@@ -9,7 +9,8 @@
 extern AnimatedGIF gif;
 
 struct GIFContext {
-  BB_SPI_LCD *oled;
+  // BB_SPI_LCD *oled;
+  Adafruit_SSD1351 *oled;
   uint8_t *sharedFrameBuffer;
   int offsetX;
   int offsetY;
@@ -52,5 +53,6 @@ void playGIF(uint8_t* gifData, size_t gifSize, bool loop);
 void playRandomGIF(void);
 void initializeGIF(void) ;
 void printMemoryStats(void);
+void renderFrame(uint8_t *pixels, uint16_t *palette, uint16_t *buffer, int width, int startX, int y, uint8_t transparent);
 
 #endif

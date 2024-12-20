@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include "display.h"
 #include "animate.h"
+// Draw a line of image directly on the LCD
 
 void setup() {
   Serial.begin(115200);

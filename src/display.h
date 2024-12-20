@@ -1,10 +1,14 @@
 #ifndef DISPLAY_H
 #define DISPLAY_H
 
-#include <bb_spi_lcd.h>
+// #include <bb_spi_lcd.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1351.h>  // Include the SSD1351 driver library
+#include <SPI.h>
 
 // Global objects
-extern BB_SPI_LCD oled;
+// extern BB_SPI_LCD oled;
+extern Adafruit_SSD1351 oled;
 
 // SSD1351 PINOUT for ESP32-S3
 // GND | GND (0V) // Common

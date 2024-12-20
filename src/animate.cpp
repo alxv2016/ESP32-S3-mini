@@ -3,12 +3,10 @@
 
 // Global variables and constants
 AnimatedGIF gif;
-GIFContext gifContext = {&oled, nullptr, 0, 0}; // Context for GIF drawing
-// Assume maximum canvas size for all GIFs
-const size_t maxCanvasWidth = GIF_WIDTH; // Max width of GIFs
-const size_t maxCanvasHeight = GIF_HEIGHT; // Max height of GIFs
-const size_t frameBufferSize = maxCanvasWidth * maxCanvasHeight * 2;  // 2 bytes per pixel (RGB565)
+GIFContext gifContext = {&oled, nullptr, 0, 0};  // Context for GIF drawing
+const size_t frameBufferSize = GIF_WIDTH * GIF_HEIGHT * 2;  // 2 bytes per pixel (RGB565)
 
+// List of GIF data files and their sizes
 GIFData gifFiles[] = {
     { (uint8_t*)LOOK_LEFT_RIGHT_EMOTE, sizeof(LOOK_LEFT_RIGHT_EMOTE) },
     { (uint8_t*)LOOK_UP_DOWN_EMOTE, sizeof(LOOK_UP_DOWN_EMOTE) },
@@ -24,127 +22,147 @@ GIFData gifFiles[] = {
     { (uint8_t*)DIZZY_EMOTE, sizeof(DIZZY_EMOTE) },
     { (uint8_t*)CRY_EMOTE, sizeof(CRY_EMOTE) },
     { (uint8_t*)ANGRY_EMOTE, sizeof(ANGRY_EMOTE) },
-    // Add other GIFs here (up to 15)
+    // More GIFs can be added here
 };
+
+// Function to print memory statistics
 void printMemoryStats() {
-    Serial.printf("Free heap: %u bytes\n", heap_caps_get_free_size(MALLOC_CAP_DEFAULT));
-    Serial.printf("Free PSRAM: %u bytes\n", heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
+    Serial.printf("Free heap: %u bytes\n", heap_caps_get_free_size(MALLOC_CAP_DEFAULT));  // Print free SRAM
+    Serial.printf("Free PSRAM: %u bytes\n", heap_caps_get_free_size(MALLOC_CAP_SPIRAM));  // Print free PSRAM
 }
 
+// Function to initialize GIF handling (allocate memory and start GIF object)
 void initializeGIF() { 
-  gif.begin(GIF_PALETTE_RGB565_BE); 
-    // Allocate shared frame buffer in PSRAM (only once during initialization)
+  gif.begin(BIG_ENDIAN_PIXELS); // Initialize GIF object for drawing with BIG_ENDIAN pixel order
+  // Allocate shared frame buffer in PSRAM (only during initialization)
   if (gifContext.sharedFrameBuffer == nullptr) {
-    gifContext.sharedFrameBuffer = (uint8_t *)heap_caps_malloc(frameBufferSize, MALLOC_CAP_8BIT);
+    gifContext.sharedFrameBuffer = (uint8_t *)heap_caps_malloc(frameBufferSize, MALLOC_CAP_SPIRAM);  // Allocate frame buffer in PSRAM
     if (!gifContext.sharedFrameBuffer) {
-        Serial.println("Error: Failed to allocate shared frame buffer in PSRAM.");
+        Serial.println("Error: Failed to allocate shared frame buffer in PSRAM.");  // Handle memory allocation failure
     }
   }
-  printMemoryStats();
+  printMemoryStats(); // Output memory statistics after initialization
 }
 
+// Function to clean up GIF context (free allocated memory and close GIF)
 void cleanupGIFContext() {
   if (gifContext.sharedFrameBuffer) {
-    heap_caps_free(gifContext.sharedFrameBuffer);
-    gifContext.sharedFrameBuffer = nullptr;
+    heap_caps_free(gifContext.sharedFrameBuffer);  // Free allocated memory for frame buffer
+    gifContext.sharedFrameBuffer = nullptr;  // Reset pointer to null
   }
-  gif.close();
+  gif.close();  // Close the GIF object to free any associated resources
 }
 
+// Helper function to render GIF frames (handles transparency and opacity)
+void renderFrame(uint8_t *pixels, uint16_t *palette, uint16_t *buffer, int width, int startX, int y, uint8_t transparent) {
+    int x = 0;
+    while (x < width) {
+        // Render opaque pixels
+        int count = 0;
+        while (x < width && pixels[x] != transparent) {
+            buffer[count++] = palette[pixels[x++]];
+        }
+        if (count > 0) {
+            gifContext.oled->startWrite();
+            gifContext.oled->setAddrWindow(startX + x - count, y, count, 1);
+            gifContext.oled->writePixels(buffer, count, true, true);
+            gifContext.oled->endWrite();
+        }
+
+        // Skip transparent pixels
+        while (x < width && pixels[x] == transparent) {
+            x++;
+        }
+    }
+}
+
+// Draw GIF frame (handles frame rendering)
+// Main GIF drawing function
 void GIFDraw(GIFDRAW *pDraw) {
-  if (pDraw->y == 0) {
-    gifContext.oled->setAddrWindow(gifContext.offsetX + pDraw->iX, gifContext.offsetY + pDraw->iY, pDraw->iWidth, pDraw->iHeight);
-  }
-  gifContext.oled->pushPixels((uint16_t *)pDraw->pPixels, pDraw->iWidth, DRAW_TO_LCD | DRAW_WITH_DMA);
+    uint8_t *pixels = pDraw->pPixels;
+    uint16_t *palette = pDraw->pPalette;
+    uint16_t tempBuffer[320]; // Temporary buffer for rendering
+    int width = pDraw->iWidth;
+
+    // Clip the width to avoid overflow
+    if (width + pDraw->iX > DISPLAY_WIDTH) {
+        width = DISPLAY_WIDTH - pDraw->iX;
+    }
+
+    // Calculate the Y position
+    int y = pDraw->iY + pDraw->y;
+    if (y >= DISPLAY_HEIGHT || pDraw->iX >= DISPLAY_WIDTH || width < 1) {
+        return;
+    }
+
+    // Handle transparency
+    if (pDraw->ucHasTransparency) {
+        renderFrame(pixels, palette, tempBuffer, width, pDraw->iX, y, pDraw->ucTransparent);
+    } else {
+        renderFrame(pixels, palette, tempBuffer, width, pDraw->iX, y, 0xFF); // No transparency
+    }
 }
 
+// Function to play a GIF (with optional looping)
+// Play GIF (handle playback of a single GIF)
 void playGIF(uint8_t *gifData, size_t gifSize, bool loop = false) {
-  // Attempt to open the GIF file from the given data and size, and set up
-  // drawing using GIFDraw. If the open operation fails, the function will
-  // return early and print an error message.
-  if (!gif.open(gifData, gifSize, GIFDraw)) {
-    Serial.println("Error: Failed to open GIF file."); // Print an error message
-    cleanupGIFContext(); // Ensure cleanup happens on failure
-    return; // Exit the function early if the GIF fails to open
-  }
-
-  // Calculate the offset (position) where the GIF should be drawn on the screen
-  gifContext.offsetX = (oled.width() - gif.getCanvasWidth()) / 2;  // Center horizontally
-  gifContext.offsetY = (oled.height() - gif.getCanvasHeight()) / 2; // Center vertically
-  // Calculate the size of the framebuffer required to store one frame of the GIF
-  size_t currentFrameBufferSize = gif.getCanvasWidth() * (gif.getCanvasHeight() + 2); // Adjust as needed
-
-  // Only reallocate the frame buffer if the size has changed
-  if (gifContext.sharedFrameBuffer == nullptr || currentFrameBufferSize != frameBufferSize) {
-    gifContext.sharedFrameBuffer = (uint8_t *)heap_caps_malloc(currentFrameBufferSize, MALLOC_CAP_8BIT);
-    if (!gifContext.sharedFrameBuffer) {
-      Serial.printf("Memory Error: Failed to allocate %zu bytes\n", currentFrameBufferSize);
-      cleanupGIFContext();
-      return; // Exit the function if memory allocation fails
-    }
-  }
-
-  // Set the drawing type to "cooked" to allow the GIF library to pre-process frames
-  gif.setDrawType(GIF_DRAW_COOKED);
-  gif.setFrameBuf(gifContext.sharedFrameBuffer);
-
-  const int targetFPS = GIF_FPS; // Set the target FPS
-  const int frameDelay = 1000000 / targetFPS; // Microseconds per frame (1 second = 1000000 microseconds)
-  unsigned long previousTime = 0; // Track the time of the previous frame
-  unsigned long currentTime = 0;
-
-  // Play the GIF frames
-  do {
-    while (gif.playFrame(false, nullptr)) {
-      currentTime = micros(); // Get the current time in microseconds
-
-      // Wait for the next frame based on the desired FPS
-      if (currentTime - previousTime >= frameDelay) {
-        previousTime = currentTime; // Update the previous time
-      } else {
-        // Wait for the remaining time to meet the target FPS
-        delayMicroseconds(frameDelay - (currentTime - previousTime));
-        previousTime = micros(); // Update previousTime to the new time after delay
-      }
+    if (!gif.open(gifData, gifSize, GIFDraw)) {
+        Serial.println("Error: Failed to open GIF file.");
+        cleanupGIFContext();
+        return;
     }
 
-    if (loop) {
-      gif.reset(); // Reset the GIF to the first frame for looping
+    size_t currentFrameBufferSize = gif.getCanvasWidth() * (gif.getCanvasHeight() + 2);  // Adjust as needed
+    if (gifContext.sharedFrameBuffer == nullptr || currentFrameBufferSize != frameBufferSize) {
+        gifContext.sharedFrameBuffer = (uint8_t*)heap_caps_malloc(currentFrameBufferSize, MALLOC_CAP_8BIT);
+        if (!gifContext.sharedFrameBuffer) {
+            Serial.printf("Memory Error: Failed to allocate %zu bytes\n", currentFrameBufferSize);
+            cleanupGIFContext();
+            return;
+        }
     }
-  } while (loop);
 
-  // Cleanup after the GIF finishes playing
-  cleanupGIFContext();
+       gif.setDrawType(GIF_DRAW_COOKED);
+
+    const int targetFPS = GIF_FPS;
+    const int frameDelay = 1000000 / targetFPS;
+    unsigned long previousTime = 0;
+
+    do {
+        while (gif.playFrame(false, nullptr)) {
+            unsigned long currentTime = micros();
+            if (currentTime - previousTime >= frameDelay) {
+                previousTime = currentTime;
+            } else {
+                delayMicroseconds(frameDelay - (currentTime - previousTime));
+                previousTime = micros();
+            }
+        }
+
+        if (loop) {
+            gif.reset();
+        }
+    } while (loop);
+
+    cleanupGIFContext();
 }
 
-// Function to play a GIF// Function to play a random GIF
+// Function to play a random GIF from the list
 void playRandomGIF() {
-  while (true) { // Infinite loop to continuously play random GIFs
-    // Randomly select a GIF file
-    int randomIndex = random(0, TOTAL_GIFS); // Get a random index (0 to NUM_GIFS-1)
+  while (true) {
+    int randomIndex = random(0, TOTAL_GIFS);  // Get a random index for the GIF list
+    uint8_t* gifData = gifFiles[randomIndex].data;  // Get the data for the selected GIF
+    size_t gifSize = gifFiles[randomIndex].size;  // Get the size of the selected GIF
+    playGIF(gifData, gifSize, false);  // Play the selected GIF once
 
-    uint8_t* gifData = gifFiles[randomIndex].data;
-    size_t gifSize = gifFiles[randomIndex].size;
+    unsigned long delayTime = random(2000, 4000);  // Random delay time between GIFs (2 to 4 seconds)
+    unsigned long startDelayTime = millis();  // Start the delay timer
 
-    // Call playGIF to handle the actual playback of the selected GIF
-    playGIF(gifData, gifSize, false);
+    playGIF((uint8_t*)REST_EMOTE, sizeof(REST_EMOTE), false);  // Play a "rest" GIF after the random one
 
-    // Define the delay time (in milliseconds)
-    unsigned long delayTime = random(2000, 4000);  // 2-5 seconds delay, adjust as needed
-    // Store the current time to manage the delay
-    unsigned long startDelayTime = millis();
-    
-    // Play the specific GIF (e.g., loading GIF or indicator) and track its duration
-    playGIF((uint8_t*)REST_EMOTE, sizeof(REST_EMOTE), false); 
-
-    // Wait for the delay period, but ensure the specific GIF plays fully
+    // Wait for the random delay time before selecting the next GIF
     while (millis() - startDelayTime < delayTime) {
-      // Optionally update your display here
-      // For example, you might want to update a progress bar or refresh the screen
-      // Example: oled.drawProgressBar(10, 10, 100, 10, (millis() - startDelayTime) / delayTime * 100);
-      // Or update an indicator showing how much time is left on the delay
+      // Optionally update display or progress bar here
     }
-
-    // After the delay time, continue to play the next random GIF
   }
 }
