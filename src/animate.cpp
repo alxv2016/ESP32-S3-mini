@@ -32,7 +32,7 @@ void printMemoryStats() {
 }
 
 void initializeGIF() { 
-  gif.begin(GIF_PALETTE_RGB565_BE); 
+  gif.begin(GIF_PALETTE_RGB565_LE); 
     // Allocate shared frame buffer in PSRAM (only once during initialization)
   if (gifContext.sharedFrameBuffer == nullptr) {
     gifContext.sharedFrameBuffer = (uint8_t *)heap_caps_malloc(frameBufferSize, MALLOC_CAP_8BIT);
@@ -53,9 +53,17 @@ void cleanupGIFContext() {
 
 void GIFDraw(GIFDRAW *pDraw) {
   if (pDraw->y == 0) {
+    gifContext.oled->startWrite(); // Start the display write transaction
     gifContext.oled->setAddrWindow(gifContext.offsetX + pDraw->iX, gifContext.offsetY + pDraw->iY, pDraw->iWidth, pDraw->iHeight);
   }
-  gifContext.oled->pushPixels((uint16_t *)pDraw->pPixels, pDraw->iWidth, DRAW_TO_LCD | DRAW_WITH_DMA);
+      // Write the current line of pixels to the display
+    uint16_t *pixels = (uint16_t *)pDraw->pPixels;  // Cast pixel data to 16-bit format
+    gifContext.oled->writePixels(pixels, pDraw->iWidth);      // Write the entire line at once
+
+       // For the last line of the frame, end the write transaction
+    if (pDraw->y == pDraw->iHeight - 1) {
+        gifContext.oled->endWrite();  // End the display write transaction
+    }
 }
 
 void playGIF(uint8_t *gifData, size_t gifSize, bool loop = false) {

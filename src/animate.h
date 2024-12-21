@@ -9,7 +9,7 @@
 extern AnimatedGIF gif;
 
 struct GIFContext {
-  BB_SPI_LCD *oled;
+  Adafruit_SSD1351 *oled;
   uint8_t *sharedFrameBuffer;
   int offsetX;
   int offsetY;

@@ -1,10 +1,23 @@
 #ifndef DISPLAY_H
 #define DISPLAY_H
 
-#include <bb_spi_lcd.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1351.h>
+#include <SPI.h>
 
 // Global objects
-extern BB_SPI_LCD oled;
+extern Adafruit_SSD1351 oled;
+
+#define TFT_BLACK 0x0000
+#define TFT_GREEN 0x07e0
+#define TFT_RED 0xf800
+#define TFT_BLUE 0x001f
+#define TFT_CYAN 0x07ff
+#define TFT_YELLOW 0xffe0
+#define TFT_MAGENTA 0xf81f
+#define TFT_WHITE 0xffff
+#define TFT_GREY 0x5AEB
+#define TFT_ORANGE 0xbbc0
 
 // SSD1351 PINOUT for ESP32-S3
 // GND | GND (0V) // Common
@@ -18,7 +31,7 @@ extern BB_SPI_LCD oled;
 // Pin configuration
 #define MISO_PIN -1
 #define MOSI_PIN 1
-#define CLK_PIN 2
+#define SCLK_PIN 2
 #define CS_PIN 3
 #define DC_PIN 4
 #define RST_PIN 5
