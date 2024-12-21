@@ -4,17 +4,15 @@
 
 void setup() {
   Serial.begin(115200);
-  Serial.println("Hello World!");
+  Serial.println("Initializing display and GIF decorder");
   initializeOLED();
-  displayBootMessage("Hello World!");
-  // No need to initialize the RGB LED
+  displayBootMessage("ALXV");
   delay(2000);
   initializeGIF();
 }
 
 // the loop function runs over and over again forever
 void loop() {
-  Serial.println("Testing from s3");
-  // playGIF((uint8_t*)REST_EMOTE, sizeof(REST_EMOTE), true); 
+  Serial.println("Playing GIF");
   playRandomGIF();
 }
