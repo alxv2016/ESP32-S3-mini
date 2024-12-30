@@ -1,10 +1,14 @@
 #ifndef DISPLAY_H
 #define DISPLAY_H
+// Using Adafruit SSD1351 library
+#include <Adafruit_GFX.h>
+#include <Adafruit_ST7789.h>
 
-#include <bb_spi_lcd.h>
-
-// Global objects
-extern BB_SPI_LCD oled;
+extern Adafruit_ST7789 tft;
+// Defined colors optimal for OLED screen
+#define TFT_BLACK 0x0000
+#define TFT_WHITE 0xffff
+#define TFT_GREY 0x5AEB
 
 // SSD1351 PINOUT for ESP32-S3
 // GND | GND (0V) // Common
@@ -22,15 +26,18 @@ extern BB_SPI_LCD oled;
 #define CS_PIN 3
 #define DC_PIN 4
 #define RST_PIN 5
+#define BACKLIGHT_PIN_D2 3  
 
-// SPI fequency
-#define SPI_FREQUENCY 20000000
+#define DISPLAY_BRIGHTNESS_LOW 20
+#define DISPLAY_BRIGHTNESS_HIGH 100
+
 // Display dimensions
-#define DISPLAY_WIDTH 128
-#define DISPLAY_HEIGHT 128
-#define DISPLAY_BRIGHTNESS 0
+#define DISPLAY_WIDTH 240
+#define DISPLAY_HEIGHT 280
 
-void initializeOLED();
+void initializeLCD();
 void displayBootMessage(const char *message);
+void setBacklightBrightness(int brightness);
+void turnOnDisplay(bool state);
 
 #endif
