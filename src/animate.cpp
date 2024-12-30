@@ -10,20 +10,7 @@ const size_t maxCanvasHeight = GIF_HEIGHT; // Max height of GIFs
 const size_t frameBufferSize = maxCanvasWidth * maxCanvasHeight * 2;  // 2 bytes per pixel (RGB565)
 
 GIFData gifFiles[] = {
-    { (uint8_t*)LOOK_LEFT_RIGHT_EMOTE, sizeof(LOOK_LEFT_RIGHT_EMOTE) },
-    { (uint8_t*)LOOK_UP_DOWN_EMOTE, sizeof(LOOK_UP_DOWN_EMOTE) },
-    { (uint8_t*)UWU_EMOTE, sizeof(UWU_EMOTE) },
-    { (uint8_t*)SLEEPY_EMOTE, sizeof(SLEEPY_EMOTE) },
     { (uint8_t*)SIGH_EMOTE, sizeof(SIGH_EMOTE) },
-    { (uint8_t*)SHOCK_EMOTE, sizeof(SHOCK_EMOTE) },
-    { (uint8_t*)PERVE_EMOTE, sizeof(PERVE_EMOTE) },
-    { (uint8_t*)MISCHIEF_EMOTE, sizeof(MISCHIEF_EMOTE) },
-    { (uint8_t*)LAUGH_EMOTE, sizeof(LAUGH_EMOTE) },
-    { (uint8_t*)KISSY_EMOTE, sizeof(KISSY_EMOTE) },
-    { (uint8_t*)JUDGE_EMOTE, sizeof(JUDGE_EMOTE) },
-    { (uint8_t*)DIZZY_EMOTE, sizeof(DIZZY_EMOTE) },
-    { (uint8_t*)CRY_EMOTE, sizeof(CRY_EMOTE) },
-    { (uint8_t*)ANGRY_EMOTE, sizeof(ANGRY_EMOTE) },
     // Add other GIFs here (up to 15)
 };
 void printMemoryStats() {
