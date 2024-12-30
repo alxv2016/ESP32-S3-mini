@@ -29,21 +29,8 @@ extern GIFData gifFiles[];
 // Define the macro to count the number of GIFs in the array
 #define TOTAL_GIFS (sizeof(gifFiles) / sizeof(gifFiles[0]))
 #define REST_EMOTE rest
-// Array of GIFs
-#define LOOK_LEFT_RIGHT_EMOTE look_left_right
-#define LOOK_UP_DOWN_EMOTE look_up_down
-#define UWU_EMOTE uwu
-#define SLEEPY_EMOTE sleepy
 #define SIGH_EMOTE sigh
-#define SHOCK_EMOTE shock
-#define PERVE_EMOTE perve
-#define MISCHIEF_EMOTE mischief
-#define LAUGH_EMOTE laugh
-#define KISSY_EMOTE kissy
-#define JUDGE_EMOTE judge
-#define DIZZY_EMOTE dizzy
-#define CRY_EMOTE cry
-#define ANGRY_EMOTE angry
+
 
 // Function declarations
 void cleanupGIFContext(void);
